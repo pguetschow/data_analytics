@@ -1,10 +1,10 @@
 import os
-
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 import statsmodels.api as sm
 from statsmodels.stats.outliers_influence import variance_inflation_factor
+from config import config
 
 
 def prepare_output_directory(output_dir):
@@ -196,23 +196,24 @@ INDEPENDENT_VARIABLES = ['Temperature Anomalies in Celsius',
 
 
 def main():
-    data_path = 'data/data.csv'
-    output_dir_biv = 'export/bivariate'
-    output_dir_eda = 'export/descriptive'
-    output_dir_regress = 'export/regression'
-    output_dir_prognosis = 'export/prognosis'
+    data_path = config['data_path']
+    output_dir_biv = config['output_dirs']['bivariate']
+    output_dir_eda = config['output_dirs']['descriptive']
+    output_dir_regress = config['output_dirs']['regression']
 
-    dependent_variable = 'Grand Total'
-    weather_events = ['Flood', 'Extreme weather', 'Drought', 'Extreme temperature', 'Wildfire']
+    dependent_variable = config['dependent_variable']
+    weather_events = config['weather_events']
 
     bivariate_analysis(data_path, output_dir_biv, dependent_variable)
-    exploratory_data_analysis(data_path, output_dir_eda, dependent_variable, weather_events, INDEPENDENT_VARIABLES)
-    regression_summary(data_path, dependent_variable, INDEPENDENT_VARIABLES, output_dir_regress)
+    exploratory_data_analysis(data_path, output_dir_eda, dependent_variable, weather_events,
+                              config['independent_variables'])
+    regression_summary(data_path, dependent_variable, config['independent_variables'], output_dir_regress)
 
     for main_variable in weather_events:
-        regression_summary(data_path, main_variable, INDEPENDENT_VARIABLES, output_dir_regress)
+        regression_summary(data_path, main_variable, config['independent_variables'], output_dir_regress)
 
     # todo: future prognosis
+
 
 if __name__ == "__main__":
     main()
