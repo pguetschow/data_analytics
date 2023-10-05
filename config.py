@@ -6,7 +6,7 @@ config = {
         'regression': 'export/regression',
         'prognosis': 'export/prognosis',
     },
-    'ignore_columns': ['Year', 'Grand Total', 'Flood', 'Extreme weather', 'Drought', 'Extreme temperature', 'Wildfire'],
+    'ignore_columns': ['Year', 'Grand Total of Extreme Weather Events', 'Flood', 'Extreme weather', 'Drought', 'Extreme temperature', 'Wildfire'],
     'independent_variables': [
         'Temperature Anomalies in Celsius',
         'Average CO2 levels in the atmosphere worldwide(in ppm)',
@@ -15,5 +15,5 @@ config = {
         'gas oil coal(in TWh)'
     ],
     'weather_events': ['Flood', 'Extreme weather', 'Drought', 'Extreme temperature', 'Wildfire'],
-    'dependent_variable': 'Grand Total'
+    'dependent_variable': 'Grand Total of Extreme Weather Events'
 }

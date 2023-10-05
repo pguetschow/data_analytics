@@ -172,8 +172,12 @@ def analyze_ridge_model_results(model, scaler, independent_variables, file, alph
     file.write("Automated Analysis of the Ridge Regression Results\n")
     file.write("-" * 50 + "\n")
 
+    # Explanation of Ridge Regression and the role of alpha
+    file.write(
+        "Ridge Regression is a type of linear regression that includes a regularization term. The regularization term discourages overly complex models which can lead to overfitting. The strength of the regularization is controlled by the parameter alpha.\n")
+
     # Alpha interpretation
-    file.write(f"Value of Alpha (Penalty Term): {alpha}\n")
+    file.write(f"Value of Alpha (Regularization Strength): {alpha}\n")
     if alpha == 0:
         file.write("This is equivalent to ordinary least squares regression without regularization.\n")
     elif alpha > 0 and alpha < 1:
@@ -181,27 +185,30 @@ def analyze_ridge_model_results(model, scaler, independent_variables, file, alph
     elif alpha == 1:
         file.write("Balanced regularization applied. The model equally relies on the data and the regularization term.\n")
     else:
-        file.write("High value of alpha. Strong regularization applied which may dominate the objective function, potentially leading to significant coefficient shrinkage.\n")
+        file.write("High value of alpha. Strong regularization applied which may dominate the objective function, leading to coefficient shrinkage and a simpler model.\n")
 
+    # Bias/Intercept Explanation
     file.write("\nIntercept (Bias): {:.4f}\n".format(model.intercept_))
+    file.write(
+        "The intercept represents the predicted value of the dependent variable when all independent variables are at their mean value (because of standardization). In non-standardized scenarios, it would be the predicted value when all predictors have a value of zero, though this might not be meaningful for all variables.\n")
 
     standardized_coeffs = model.coef_
     original_scale_coeffs = standardized_coeffs / scaler.scale_
 
     for var, coef, original_coef in zip(independent_variables, standardized_coeffs, original_scale_coeffs):
         file.write(f"\nVariable: {var}\n")
-        file.write(f"Coefficient (Standardized): {coef:.4f}\n")
+        file.write(f"Coefficient (Standardized Scale): {coef:.4f}\n")
         file.write(f"Coefficient (Original Scale): {original_coef:.4f}\n")
 
-        # Interpretation of coefficients
+        # Enhanced Interpretation of coefficients
         if abs(coef) > 1.0:
-            file.write(f"The variable '{var}' has a strong impact on the dependent variable when standardized.\n")
+            file.write(f"The variable '{var}' has a strong impact on the dependent variable in its standardized form.\n")
             if original_coef > 0:
-                file.write(f"A one unit increase in '{var}' (in its original scale) is associated with approximately a {original_coef:.4f} increase in the dependent variable, keeping all other predictors constant.\n")
+                file.write(f"For every one unit increase in '{var}' (in its original scale), the dependent variable is expected to increase by approximately {original_coef:.4f}, keeping other factors constant.\n")
             else:
-                file.write(f"A one unit increase in '{var}' (in its original scale) is associated with approximately a {original_coef:.4f} decrease in the dependent variable, keeping all other predictors constant.\n")
+                file.write(f"For every one unit increase in '{var}' (in its original scale), the dependent variable is expected to decrease by approximately {original_coef:.4f}, keeping other factors constant.\n")
         else:
-            file.write(f"The variable '{var}' has a moderate/low impact on the dependent variable when standardized.\n")
+            file.write(f"The variable '{var}' has a moderate to low impact on the dependent variable in its standardized form.\n")
 
     # Insights into relative importance
     absolute_coeffs = [abs(coeff) for coeff in standardized_coeffs]
@@ -211,9 +218,10 @@ def analyze_ridge_model_results(model, scaler, independent_variables, file, alph
 
     file.write("\nRelative Importance of Predictors (Standardized):\n")
     for var, imp in sorted_importances:
-        file.write(f"{var}: {imp*100:.2f}%\n")
+        file.write(f"{var}: {imp*100:.2f}% of total standardized importance.\n")
 
     file.write("-" * 50 + "\n")
+
 
 
 def fit_ridge_regression_model(X, y, alpha=1.0):
@@ -265,7 +273,7 @@ def regression_summary(data_path, dependent_variable, independent_variables, out
 
 
 # Constants
-IGNORE_COLUMNS = ['Year', 'Grand Total', 'Flood', 'Extreme weather', 'Drought', 'Extreme temperature', 'Wildfire']
+IGNORE_COLUMNS = ['Year', 'Grand Total of Extreme Weather Events', 'Flood', 'Extreme weather', 'Drought', 'Extreme temperature', 'Wildfire']
 INDEPENDENT_VARIABLES = config['independent_variables']
 
 
