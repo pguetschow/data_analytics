@@ -5,6 +5,8 @@ import seaborn as sns
 import statsmodels.api as sm
 from statsmodels.stats.outliers_influence import variance_inflation_factor
 from config import config
+from sklearn.linear_model import Ridge
+from sklearn.preprocessing import StandardScaler
 
 
 def prepare_output_directory(output_dir):
@@ -140,7 +142,7 @@ def fit_regression_model(X, y):
     return sm.OLS(y, X).fit()
 
 
-def analyze_model_results(model, file, alpha=0.05):
+def analyze_regression_model_results(model, file, alpha=0.05):
     results_summary = model.summary2().tables[1]
 
     file.write("Automated Analysis of the Regression Results\n")
@@ -166,6 +168,82 @@ def analyze_model_results(model, file, alpha=0.05):
 
     file.write("-" * 45 + "\n")
 
+def analyze_ridge_model_results(model, scaler, independent_variables, file, alpha=1.0):
+    file.write("Automated Analysis of the Ridge Regression Results\n")
+    file.write("-" * 50 + "\n")
+
+    # Alpha interpretation
+    file.write(f"Value of Alpha (Penalty Term): {alpha}\n")
+    if alpha == 0:
+        file.write("This is equivalent to ordinary least squares regression without regularization.\n")
+    elif alpha > 0 and alpha < 1:
+        file.write("A small value of alpha implies minimal regularization. The model relies mostly on the data and less on the regularization term.\n")
+    elif alpha == 1:
+        file.write("Balanced regularization applied. The model equally relies on the data and the regularization term.\n")
+    else:
+        file.write("High value of alpha. Strong regularization applied which may dominate the objective function, potentially leading to significant coefficient shrinkage.\n")
+
+    file.write("\nIntercept (Bias): {:.4f}\n".format(model.intercept_))
+
+    standardized_coeffs = model.coef_
+    original_scale_coeffs = standardized_coeffs / scaler.scale_
+
+    for var, coef, original_coef in zip(independent_variables, standardized_coeffs, original_scale_coeffs):
+        file.write(f"\nVariable: {var}\n")
+        file.write(f"Coefficient (Standardized): {coef:.4f}\n")
+        file.write(f"Coefficient (Original Scale): {original_coef:.4f}\n")
+
+        # Interpretation of coefficients
+        if abs(coef) > 1.0:
+            file.write(f"The variable '{var}' has a strong impact on the dependent variable when standardized.\n")
+            if original_coef > 0:
+                file.write(f"A one unit increase in '{var}' (in its original scale) is associated with approximately a {original_coef:.4f} increase in the dependent variable, keeping all other predictors constant.\n")
+            else:
+                file.write(f"A one unit increase in '{var}' (in its original scale) is associated with approximately a {original_coef:.4f} decrease in the dependent variable, keeping all other predictors constant.\n")
+        else:
+            file.write(f"The variable '{var}' has a moderate/low impact on the dependent variable when standardized.\n")
+
+    # Insights into relative importance
+    absolute_coeffs = [abs(coeff) for coeff in standardized_coeffs]
+    total_importance = sum(absolute_coeffs)
+    relative_importances = [(var, abs(coeff) / total_importance) for var, coeff in zip(independent_variables, standardized_coeffs)]
+    sorted_importances = sorted(relative_importances, key=lambda x: x[1], reverse=True)
+
+    file.write("\nRelative Importance of Predictors (Standardized):\n")
+    for var, imp in sorted_importances:
+        file.write(f"{var}: {imp*100:.2f}%\n")
+
+    file.write("-" * 50 + "\n")
+
+
+def fit_ridge_regression_model(X, y, alpha=1.0):
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
+
+    ridge = Ridge(alpha=alpha)
+    ridge.fit(X_scaled, y)
+
+    return ridge, scaler
+
+def ridge_summary(data_path, dependent_variable, independent_variables, output_dir, alpha=1.0):
+    dependent_variable_clean = dependent_variable.replace(" ", "_")
+    output_file_name = f'regression_analysis_{dependent_variable_clean}.txt'
+
+    df = pd.read_csv(data_path)
+    prepare_output_directory(output_dir)
+    output_path = os.path.join(output_dir, output_file_name)
+
+    X = df[independent_variables]
+    y = df[dependent_variable]
+
+    model, scaler = fit_ridge_regression_model(X, y, alpha)
+
+    with open(output_path, 'w') as file:
+        file.write(f"Ridge Regression Analysis (alpha={alpha}) for {dependent_variable}\n")
+        file.write("-" * 45 + "\n")
+        file.write(f"Intercept: {model.intercept_:.4f}\n\n")
+        analyze_ridge_model_results(model, scaler, independent_variables, file, alpha)
+
 
 def regression_summary(data_path, dependent_variable, independent_variables, output_dir):
     dependent_variable_clean = dependent_variable.replace(" ", "_")
@@ -183,16 +261,12 @@ def regression_summary(data_path, dependent_variable, independent_variables, out
 
     with open(output_path, 'w') as file:
         file.write(model.summary().as_text() + "\n")
-        analyze_model_results(model, file)
+        analyze_regression_model_results(model, file)
 
 
 # Constants
 IGNORE_COLUMNS = ['Year', 'Grand Total', 'Flood', 'Extreme weather', 'Drought', 'Extreme temperature', 'Wildfire']
-INDEPENDENT_VARIABLES = ['Temperature Anomalies in Celsius',
-                         'Average CO2 levels in the atmosphere worldwide(in ppm)',
-                         'Annual CO2 emissions worldwide (in billion metric tons)',
-                         'Adjusted sea level increase since 1880 (in cm)',
-                         'gas oil coal(in TWh)']
+INDEPENDENT_VARIABLES = config['independent_variables']
 
 
 def main():
@@ -200,17 +274,14 @@ def main():
     output_dir_biv = config['output_dirs']['bivariate']
     output_dir_eda = config['output_dirs']['descriptive']
     output_dir_regress = config['output_dirs']['regression']
-
+    output_dir_prognosis = config['output_dirs']['prognosis']
     dependent_variable = config['dependent_variable']
     weather_events = config['weather_events']
 
     bivariate_analysis(data_path, output_dir_biv, dependent_variable)
     exploratory_data_analysis(data_path, output_dir_eda, dependent_variable, weather_events,
                               config['independent_variables'])
-    regression_summary(data_path, dependent_variable, config['independent_variables'], output_dir_regress)
-
-    for main_variable in weather_events:
-        regression_summary(data_path, main_variable, config['independent_variables'], output_dir_regress)
+    ridge_summary(data_path, dependent_variable, config['independent_variables'], output_dir_regress)
 
     # todo: future prognosis
 
