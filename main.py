@@ -52,9 +52,10 @@ def plot_multiple_events_over_time(data, event_columns, output_dir):
     plt.title("Trend for Extreme Weather Events over Time")
     plt.xlabel("Year")
     plt.legend()
-    plt.savefig(os.path.join(output_dir, "all_events_trend.png"))
+    event_str = '_'.join(event_columns).replace(' ', '_').replace(',', '').lower()
+    filename = f"all_({event_str})_trend.png"
+    plt.savefig(os.path.join(output_dir, filename))
     plt.show()
-
 
 def plot_correlation_matrix(data, selected_columns, output_dir):
     selected_df = data[selected_columns]
@@ -135,6 +136,13 @@ def exploratory_data_analysis(
 
     # Plot All Extreme Weather Events on One Graph
     plot_multiple_events_over_time(df, event_columns, output_dir)
+    plot_multiple_events_over_time(df, [
+        'Gas Consumption (in TWh)',
+        'Oil Consumption (in TWh)',
+        'Coal Consumption (in TWh)',
+        'Fossil Fuel Consumption (in TWh)',
+        'Renewable Energy Consumption (in TWh)',
+    ], output_dir)
 
     # Correlation Matrix
     selected_columns = event_columns + independent_variables
@@ -186,6 +194,7 @@ def print_multicollinearity(X, threshold=5.0):
     if not high_vif.empty:
         print("Warning: Potential multicollinearity detected:")
         print(high_vif)
+        print("Not necessarily a problem, see: https://link.springer.com/article/10.1007/s11135-006-9018-6")
 
 
 def fit_regression_model(X, y):
@@ -507,19 +516,19 @@ def main():
     regression_summary(
         data_path,
         dependent_variable,
-        config["independent_variables"],
+        config["independent_variables_regression"],
         output_dir_regress,
     )
     ridge_summary(
         data_path,
         dependent_variable,
-        config["independent_variables"],
+        config["independent_variables_regression"],
         output_dir_regress,
     )
     pls_summary(
         data_path,
         dependent_variable,
-        config["independent_variables"],
+        config["independent_variables_regression"],
         output_dir_regress,
     )
 
